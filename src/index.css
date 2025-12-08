@@ -1,41 +1,75 @@
+/* ========= index.css ========= */
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* Background:
+   - Illustration of people sharing a ride / carpool
+   - Soft overlay so content is readable
+*/
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f4f5fb;
-  color: #222;
+  color: #0f172a;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.70), rgba(15, 23, 42, 0.92)),
+    url("/images/ride-sharing-illustration.png"); /* CHANGE PATH */
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 
 #root {
   min-height: 100vh;
-  background: #f4f5fb;
 }
 
+/* Main container: clean card */
 .container {
+  position: relative;
   width: 95%;
   max-width: 1000px;
   margin: 90px auto 30px;
-  background-color: #ffffff;
-  border-radius: 12px;
+  background-color: #f9fafb;
+  border-radius: 18px;
   padding: 24px 26px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.25);
+  border: 1px solid #e5e7eb;
+}
+
+/* Slight accent strip on left, like a route marker */
+.container::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  left: 0;
+  width: 4px;
+  height: 80px;
+  border-radius: 0 8px 8px 0;
+  background: linear-gradient(to bottom, #22c55e, #3b82f6);
 }
 
 .container h2 {
   margin-bottom: 10px;
-  color: #111827;
+  color: #0f172a;
+  letter-spacing: 0.03em;
 }
 
 .container h3 {
   margin: 18px 0 8px;
-  color: #1f2933;
+  color: #1f2937;
 }
 
-/* Forms */
+ul {
+  list-style: disc;
+  margin-left: 20px;
+  margin-top: 6px;
+  color: #374151;
+}
+
+/* ========= Forms ========= */
+
 .form {
   display: flex;
   flex-direction: column;
@@ -55,71 +89,96 @@ body {
 .form button {
   padding: 10px 12px;
   font-size: 15px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid #d1d5db;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  background-color: #ffffff;
+  color: #111827;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.form input::placeholder {
+  color: #9ca3af;
 }
 
 .form input:focus,
 .form select:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
+  background-color: #f9fafb;
+  transform: translateY(-1px);
 }
 
 .form select {
-  background-color: #ffffff;
   cursor: pointer;
 }
 
+/* Primary button – looks like “Share Ride / Book Ride” */
 .form button {
-  background-color: #2563eb;
+  background: linear-gradient(to right, #22c55e, #16a34a);
   color: #ffffff;
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   border: none;
   cursor: pointer;
 }
 
 .form button:hover {
-  background-color: #1d4ed8;
+  background: linear-gradient(to right, #16a34a, #15803d);
+  transform: translateY(-1px);
+}
+
+.form button:active {
+  transform: translateY(0);
 }
 
 button {
   font-family: inherit;
 }
 
+/* Messages */
 .error {
-  color: #dc2626;
+  color: #b91c1c;
   text-align: center;
   font-weight: 600;
   margin-top: 4px;
 }
 
 .message {
-  color: #16a34a;
+  color: #15803d;
   text-align: center;
   font-weight: 600;
   margin-top: 4px;
 }
 
-/* Tables */
+/* ========= Tables ========= */
+
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 18px;
   font-size: 14px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
 
 table th,
 table td {
-  border: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
   padding: 10px 8px;
   text-align: center;
 }
 
 table th {
-  background: #2563eb;
-  color: #ffffff;
+  background: #eff6ff;
+  color: #1f2937;
   font-weight: 600;
 }
 
@@ -127,24 +186,36 @@ table tr:nth-child(even) {
   background-color: #f9fafb;
 }
 
-table tr:hover {
-  background-color: #eff6ff;
+table tr:nth-child(odd) {
+  background-color: #ffffff;
 }
 
+table tr:hover {
+  background-color: #e0f2fe;
+}
+
+/* Table buttons (Edit / Delete / etc) */
 table button {
   padding: 5px 10px;
-  border-radius: 6px;
+  border-radius: 999px;
   border: none;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   font-weight: 500;
+  background: #2563eb;
+  color: #ffffff;
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
 }
 
 table button:hover {
-  opacity: 0.9;
+  background: #1d4ed8;
+  transform: translateY(-1px);
 }
 
-/* Dashboard stats */
+/* ========= Dashboard Stats ========= */
+
 .stats-row {
   display: flex;
   flex-wrap: wrap;
@@ -156,51 +227,84 @@ table button:hover {
   flex: 1;
   min-width: 170px;
   background: #f9fafb;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 12px 14px;
   border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .stats-card h3 {
-  margin-bottom: 4px;
-  font-size: 14px;
-  color: #4b5563;
+  font-size: 13px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
 }
 
 .stats-card p {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   color: #111827;
 }
 
-ul {
-  list-style: disc;
-  margin-left: 20px;
-  margin-top: 6px;
-}
+/* ========= Link Button ========= */
 
-/* Link button */
 .link-button {
   display: inline-block;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 999px;
   background: #2563eb;
   color: #ffffff;
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
+  margin-top: 8px;
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
 }
 
 .link-button:hover {
   background: #1d4ed8;
+  transform: translateY(-1px);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* ========= Responsive ========= */
+
+/* Tablet / small laptop */
+@media (max-width: 1024px) {
   .container {
-    width: 95%;
+    max-width: 95%;
     margin-top: 80px;
+    padding: 20px 18px;
+  }
+
+  table {
+    font-size: 13px;
+  }
+
+  .stats-card p {
+    font-size: 20px;
+  }
+}
+
+/* Mobiles */
+@media (max-width: 768px) {
+  body {
+    background-attachment: scroll; /* better for mobile performance */
+  }
+
+  .container {
+    width: 94%;
+    margin: 76px auto 24px;
     padding: 18px 16px;
+    border-radius: 14px;
+  }
+
+  .container::before {
+    height: 60px;
   }
 
   table {
@@ -210,5 +314,53 @@ ul {
   table th,
   table td {
     padding: 8px 6px;
+  }
+
+  .stats-row {
+    gap: 12px;
+  }
+
+  .stats-card {
+    min-width: 100%;
+  }
+}
+
+/* Very small phones */
+@media (max-width: 480px) {
+  .container {
+    width: 100%;
+    margin: 70px 10px 20px;
+    padding: 16px 12px;
+  }
+
+  .container h2 {
+    font-size: 18px;
+  }
+
+  .container h3 {
+    font-size: 15px;
+  }
+
+  .form input,
+  .form select,
+  .form button {
+    font-size: 14px;
+    padding: 9px 10px;
+  }
+
+  /* Make table scroll if too wide */
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table thead,
+  table tbody,
+  table tr,
+  table th,
+  table td {
+    white-space: nowrap;
   }
 }
