@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 /* Common */
 import Header from "./common/Header";
 import ProtectedRoute from "./common/ProtectedRoute";
+import RootRedirect from "./components/RootRedirect";
 
 /* Auth */
 import Login from "./auth/Login";
@@ -15,6 +16,8 @@ import AdminUsers from "./admin/AdminUsers";
 import AddVehicle from "./admin/AddVehicle";
 import VehiclesList from "./admin/VehiclesList";
 import DriverDashboard from "./driver/DriverDashboard";
+import DriverReserve from "./driver/DriverReserve";
+import DriverHistory from "./driver/DriverHistory";
 
 /* User */
 import UserBus from "./user/UserBus";
@@ -30,6 +33,9 @@ export default function App() {
     <Router>
       <Header />
       <Routes>
+        {/* Root Redirect */}
+        <Route path="/" element={<RootRedirect />} />
+
         {/* Public */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -43,7 +49,9 @@ export default function App() {
 
         {/* Driver */}
         <Route path="/driver-dashboard" element={<ProtectedRoute allowedRoles={["driver"]}><DriverDashboard /></ProtectedRoute>} />
+        <Route path="/driver/reserve/:id" element={<ProtectedRoute allowedRoles={["driver"]}><DriverReserve /></ProtectedRoute>} />
         <Route path="/driver/add-ride" element={<ProtectedRoute allowedRoles={["driver"]}><AddVehicle /></ProtectedRoute>} />
+        <Route path="/driver/history" element={<ProtectedRoute allowedRoles={["driver"]}><DriverHistory /></ProtectedRoute>} />
 
         {/* User */}
         <Route path="/user-rides" element={<ProtectedRoute allowedRoles={["user"]}><UserBus /></ProtectedRoute>} />

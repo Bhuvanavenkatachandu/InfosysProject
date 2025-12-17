@@ -42,7 +42,11 @@ export const apiFetch = async (path, opts = {}) => {
   let body = null;
   try { body = text ? JSON.parse(text) : null; } catch { body = text; }
   if (!res.ok) {
-    const err = new Error(body?.error || res.statusText || "Request failed");
+    if (res.status === 401 || res.status === 403) {
+      localStorage.removeItem("token");
+      // Optional: window.location.href = "/login"; // Force redirect
+    }
+    const err = new Error((body?.error || res.statusText || "Request failed") + ` (Status: ${res.status})`);
     err.status = res.status; err.body = body;
     throw err;
   }

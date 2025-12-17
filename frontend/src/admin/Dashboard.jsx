@@ -4,7 +4,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { apiFetch, getToken, verifyJWT } from "../utils/jwt";
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({ users: 0, drivers: 0, vehicles: 0, bookings: 0 });
+  const [stats, setStats] = useState({
+    users: 0, drivers: 0, vehicles: 0, bookings: 0,
+    cancelledBookings: 0, totalVolume: 0, totalRides: 0
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -21,18 +24,16 @@ const Dashboard = () => {
       setLoading(true);
       setError("");
       try {
-        // fetch users
-        const users = await apiFetch("/api/admin/users");
-        // fetch vehicles
-        const vehicles = await apiFetch("/api/vehicles");
-        // fetch all bookings (admin-only)
-        const bookings = await apiFetch("/api/bookings");
-
+        // New Endpoint
+        const data = await apiFetch("/api/admin/users/stats/detailed");
         setStats({
-          users: Array.isArray(users) ? users.filter(u => u.role !== 'driver').length : 0, // Count only regular users? Or separate them. Let's separate.
-          drivers: Array.isArray(users) ? users.filter(u => u.role === 'driver').length : 0,
-          vehicles: Array.isArray(vehicles) ? vehicles.length : 0,
-          bookings: Array.isArray(bookings) ? bookings.length : 0,
+          users: data.userCount,
+          drivers: data.driverCount,
+          vehicles: data.totalRides,
+          bookings: data.totalBookings,
+          cancelledBookings: data.cancelledBookings,
+          totalVolume: data.totalVolume,
+          totalRides: data.totalRides
         });
       } catch (err) {
         console.error("Dashboard load failed:", err);
@@ -43,13 +44,12 @@ const Dashboard = () => {
     };
 
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   return (
     <div className="container">
-      <h2>Ride Share Admin Dashboard</h2>
-      <p>Manage users, rides, and bookings.</p>
+      <h2>Admin Dashboard</h2>
+      <p className="text-muted">Monitor platform performance.</p>
 
       {loading ? (
         <p>Loading stats…</p>
@@ -57,22 +57,34 @@ const Dashboard = () => {
         <p className="validation-msg error">Error: {error}</p>
       ) : (
         <>
-          <div className="grid grid-cols-4 gap-2">
-            <div className="card text-center">
-              <h3>Total Users</h3>
-              <p className="text-large">{stats.users}</p>
+          <div className="grid grid-cols-4 gap-4 mb-4">
+            <div className="card text-center text-primary">
+              <h3>{stats.users}</h3>
+              <p>Users</p>
             </div>
-            <div className="card text-center">
-              <h3>Total Drivers</h3>
-              <p className="text-large">{stats.drivers}</p>
+            <div className="card text-center text-success">
+              <h3>{stats.drivers}</h3>
+              <p>Drivers</p>
             </div>
-            <div className="card text-center">
-              <h3>Total Rides</h3>
-              <p className="text-large">{stats.vehicles}</p>
+            <div className="card text-center text-secondary">
+              <h3>{stats.vehicles}</h3>
+              <p>Total Rides</p>
             </div>
-            <div className="card text-center">
-              <h3>Total Bookings</h3>
-              <p className="text-large">{stats.bookings}</p>
+            <div className="card text-center text-warning">
+              <h3>{stats.bookings}</h3>
+              <p>Bookings</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="card bg-light">
+              <h4>Platform Earnings (Volume)</h4>
+              <p className="text-large text-success font-bold">₹{stats.totalVolume.toLocaleString()}</p>
+            </div>
+            <div className="card bg-light">
+              <h4>Cancellations & Disputes</h4>
+              <p className="text-large text-danger font-bold">{stats.cancelledBookings}</p>
+              <p className="text-small text-muted">{(stats.cancelledBookings / (stats.bookings || 1) * 100).toFixed(1)}% Rate</p>
             </div>
           </div>
 

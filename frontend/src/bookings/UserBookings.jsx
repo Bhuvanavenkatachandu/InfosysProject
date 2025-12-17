@@ -22,6 +22,7 @@ const UserBookings = () => {
 
   return (
     <div className="container mt-4">
+
       <h2>My Bookings</h2>
       <div className="table-container">
         <table className="table table-striped">
@@ -41,23 +42,35 @@ const UserBookings = () => {
               <td>{b.vehicle.toLocation}</td>
               <td>{b.vehicle.date}</td>
               <td style={{ fontSize: '0.9em', color: '#666' }}>{formatTime(b.createdAt)}</td>
-              <td>{b.seats}</td>
               <td>
-                <div className="flex flex-col gap-1">
+                <p><strong>Seats:</strong> {b.seats}</p>
+                <p><strong>Total:</strong> ₹{b.seats * b.vehicle.price}</p>
+              </td>
+              <td>
+                <div style={{ marginBottom: '5px' }}>
                   <span className={`badge ${b.status === "CONFIRMED" ? "success" : b.status === "PENDING" ? "warning" : "error"}`}>
                     {b.status}
                   </span>
-                  <span style={{ fontSize: '0.8rem', color: '#666' }}>
-                    {getDaysLeft(b.vehicle.date)}
-                  </span>
                 </div>
+                <div style={{ fontSize: '0.9em', color: '#555' }}>
+                  {getDaysLeft(b.vehicle.date)}
+                </div>
+                {b.vehicle.driverPhone && (
+                  <div style={{ marginTop: '5px', fontSize: '0.85em' }} className="text-primary">
+                    <i className="fas fa-phone"></i> {b.vehicle.driverPhone}
+                  </div>
+                )}
+
               </td>
             </tr>
           ))}</tbody>
         </table>
       </div>
-    </div>
+    </div >
   );
 };
+
+// Import at top need to be added manually or automatically if supported. I will do full Replace.
+
 
 export default UserBookings;

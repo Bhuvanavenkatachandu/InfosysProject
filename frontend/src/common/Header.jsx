@@ -1,12 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { verifyJWT, getToken } from "../utils/jwt";
-import "./Header.css"; // if you have it; otherwise ignore
+
 
 const Header = () => {
   const navigate = useNavigate();
   const user = verifyJWT(getToken());
-  const [isDark, setIsDark] = React.useState(false);
+  const [isDark, setIsDark] = useState(false);
+  const [showNotif, setShowNotif] = useState(false);
 
   React.useEffect(() => {
     // Check initial preference
@@ -42,7 +43,6 @@ const Header = () => {
   return (
     <nav className="navbar">
       <div className="nav-brand" style={{ position: 'relative', fontFamily: "'Righteous', cursive", letterSpacing: '1px', fontSize: '1.5rem' }}>
-        {/* Inject Font */}
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Righteous&display=swap');
         </style>
@@ -53,7 +53,7 @@ const Header = () => {
         {/* Hanging Bulb Rope */}
         <div style={{
           position: 'absolute',
-          left: '30px', /* Adjust to hang from a letter */
+          left: '30px',
           top: '20px',
           display: 'flex',
           flexDirection: 'column',
@@ -62,14 +62,12 @@ const Header = () => {
           cursor: 'pointer',
           animation: 'swing 3s ease-in-out infinite'
         }} onClick={toggleTheme}>
-          {/* The Rope */}
           <div style={{
             width: '2px',
             height: '40px',
             backgroundColor: 'var(--color-text-main)',
             opacity: 0.5
           }}></div>
-          {/* The Bulb */}
           <div style={{
             width: '16px',
             height: '16px',
@@ -96,6 +94,7 @@ const Header = () => {
             <Link to="/register" className="nav-item">Register</Link>
           </>
         )}
+
         {user && user.role === "user" && (
           <>
             <Link to="/user-rides" className="nav-item">Rides</Link>

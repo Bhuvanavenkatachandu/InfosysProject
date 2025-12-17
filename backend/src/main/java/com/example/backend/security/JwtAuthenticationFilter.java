@@ -36,7 +36,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) { filterChain.doFilter(request, response); return; }
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         String token = authHeader.substring(7);
         try {
             String email = null;
@@ -48,14 +51,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             } else {
                 try {
                     byte[] decoded = Base64.getDecoder().decode(token);
-                    Map<?,?> obj = mapper.readValue(decoded, Map.class);
+                    Map<?, ?> obj = mapper.readValue(decoded, Map.class);
                     Object userObj = obj.get("user");
                     if (userObj instanceof Map) {
-                        Map<?,?> userMap = (Map<?,?>) userObj;
-                        if (userMap.get("email") != null) email = userMap.get("email").toString();
-                        if (userMap.get("role") != null) role = userMap.get("role").toString();
+                        Map<?, ?> userMap = (Map<?, ?>) userObj;
+                        if (userMap.get("email") != null)
+                            email = userMap.get("email").toString();
+                        if (userMap.get("role") != null)
+                            role = userMap.get("role").toString();
                     }
-                } catch (Exception ex) { throw ex; }
+                } catch (Exception ex) {
+                    throw ex;
+                }
             }
             if (email != null && role != null) {
                 List<SimpleGrantedAuthority> auths = List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
@@ -66,6 +73,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.clearContext();
             }
         } catch (Exception ex) {
+            System.err.println("JWT Verification Failed: " + ex.getMessage());
+            ex.printStackTrace();
             SecurityContextHolder.clearContext();
         }
         filterChain.doFilter(request, response);

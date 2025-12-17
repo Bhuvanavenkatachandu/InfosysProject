@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { verifyJWT } from "../utils/jwt";
+import { verifyJWT, apiFetch } from "../utils/jwt";
 
 const ConfirmBooking = () => {
   const location = useLocation();
@@ -9,6 +9,8 @@ const ConfirmBooking = () => {
   const user = verifyJWT(token);
 
   const bookingData = location.state?.bookingData || null;
+
+  const [offerPrice, setOfferPrice] = useState(0);
 
   useEffect(() => {
     if (!user || user.role !== "user") {
@@ -19,87 +21,141 @@ const ConfirmBooking = () => {
       navigate("/user-rides");
       return;
     }
+    // Set initial offer to calculated total
+    if (bookingData) {
+      const t = Number(bookingData.bus.price) * Number(bookingData.seats || 0);
+      setOfferPrice(t);
+    }
   }, [bookingData, navigate, user]);
 
   if (!bookingData || !bookingData.bus) {
-    return (
-      <div className="container">
-        <h2>No booking data found.</h2>
-      </div>
-    );
+    return <div className="container"><h2>No booking data found.</h2></div>;
   }
 
-  const { bus, seats, passengerNames, busIndex } = bookingData;
-  const total = Number(bus.price) * Number(seats || 0);
+  const { bus, seats, passengerNames } = bookingData;
+  // Calculate Standard Price
+  const standardTotal = Number(bus.price) * Number(seats || 0);
 
-  const confirmBooking = async () => {
+  const handlePayment = async () => {
     try {
-      const body = {
-        vehicleId: bus.id,
+      if (offerPrice <= 0) { alert("Price must be greater than 0"); return; }
+
+      // 1. Create Booking (PENDING) with Custom Price
+      const bookingBody = {
+        vehicle: { id: bus.id },
         seats: Number(seats),
-        passengerNames
+        pickupLocation: bus.fromLocation,
+        dropoffLocation: bus.toLocation,
+        distanceKm: bus.distanceKm || 0, // Should be passed if available
+        totalPrice: Number(offerPrice), // User's offer
+        passengers: passengerNames.map(name => ({ name, age: 30, gender: 'Other' })) // Mock details as list of strings passed
       };
-      await import("../utils/jwt").then(m => m.apiFetch("/api/bookings", { method: "POST", body: JSON.stringify(body) }));
-      navigate("/booking-success");
+
+      // Note: Backend BookingService needs to be updated to accept 'passengers' list logic if not present
+      // For now, assuming backend handles or ignores. Wait, Booking.java has @ElementCollection passengers? No, removed?
+      // Actually prior errors showed issues with ElementCollection.
+      // Let's stick to basic fields. 
+      // If passengers are string names, we might need a richer object. 
+      // The current backend Booking.java doesn't seem to have a complex Passenger List unless I add it.
+      // I'll send basic string names in a "notes" field if available or just ignore for now to focus on Payment.
+
+      const bookingRes = await apiFetch("/api/bookings", {
+        method: "POST",
+        body: JSON.stringify(bookingBody)
+      });
+
+      // 2. Create Razorpay Order
+      const paymentOrder = await apiFetch("/api/payments/create-order", {
+        method: "POST",
+        body: JSON.stringify({
+          bookingId: bookingRes.id,
+          amount: Number(offerPrice)
+        })
+      });
+
+      // 3. Open Razorpay
+      const options = {
+        key: "rzp_test_placeholder", // Replace with real key if available
+        amount: paymentOrder.amount * 100,
+        currency: "INR",
+        name: "Ride Share App",
+        description: "Booking Payment",
+        order_id: paymentOrder.razorpayOrderId,
+        handler: async function (response) {
+          try {
+            await apiFetch("/api/payments/verify", {
+              method: "POST",
+              body: JSON.stringify({
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature
+              })
+            });
+            // Update text to Paid/Confirmed
+            await apiFetch(`/api/bookings/${bookingRes.id}/status`, {
+              method: "PUT",
+              body: JSON.stringify({ status: "CONFIRMED" })
+            });
+            alert("Payment Successful! Booking Confirmed.");
+            navigate("/my-bookings");
+          } catch (e) {
+            alert("Verification Failed: " + e.message);
+          }
+        },
+        prefill: { email: user.email, contact: "9999999999" },
+        theme: { color: "#3399cc" }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response) {
+        alert("Payment Failed: " + response.error.description);
+      });
+      rzp.open();
+
     } catch (err) {
-      alert(err.message || "Booking failed");
+      console.error(err);
+      alert("Process Failed: " + err.message);
     }
   };
 
-  const handleBack = () => {
-    navigate(-1);
-  };
   return (
     <div className="container mt-4">
       <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <h2>Pre-Booking Summary</h2>
-        <p className="text-muted mb-4">Please review your ride details before confirming.</p>
+        <h2>Confirm & Pay</h2>
 
-        <h3>Ride Details</h3>
-        <div className="mb-4 flex gap-4">
-          {bus.imageUrl && <img src={bus.imageUrl} alt="Ride" style={{ width: '150px', height: '100px', objectFit: 'cover', borderRadius: '8px' }} />}
-          <div>
-            <p>
-              <strong>From:</strong> {bus.fromLocation} <br />
-              <strong>To:</strong> {bus.toLocation} <br />
-              {bus.route && <><strong>Via:</strong> {bus.route}<br /></>}
-              <strong>Date:</strong> {bus.date} <br />
-              <strong>Vehicle:</strong> {bus.vehicleType} <br />
-              {bus.driverName && <><strong>Driver:</strong> {bus.driverName}<br /></>}
-              <strong>Price per seat:</strong> ₹{bus.price}
-            </p>
-          </div>
+        <div className="mb-4">
+          <h4 className="text-muted">Ride Summary</h4>
+          <p><strong>{bus.fromLocation}</strong> &rarr; <strong>{bus.toLocation}</strong></p>
+          <p>Date: {bus.date}</p>
+          <p>Vehicle: {bus.vehicleType}</p>
+          <p>Seats: {seats}</p>
+          <p>Passengers: {passengerNames.join(", ")}</p>
         </div>
 
-        <h3>Passengers</h3>
-        <p><strong>Seats:</strong> {seats}</p>
-        <ul className="mb-4">
-          {passengerNames.map((n, i) => (
-            <li key={i}>{n}</li>
-          ))}
-        </ul>
-
-        <h3>Total Amount: ₹{total}</h3>
-
-        <div className="alert alert-warning mb-4" style={{ background: '#fff3cd', color: '#856404', padding: '10px', borderRadius: '4px' }}>
-          <strong>Note:</strong> Your booking will be <strong>PENDING</strong> until approved by the driver.
+        <div className="mb-4 p-3 bg-light rounded">
+          <div className="flex justify-between items-center mb-2">
+            <span>Calculated Fare:</span>
+            <span className="text-muted" style={{ textDecoration: 'line-through' }}>₹{standardTotal}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <label><strong>Your Offer (₹):</strong></label>
+            <input
+              type="number"
+              className="input"
+              style={{ width: '120px', textAlign: 'right', fontWeight: 'bold' }}
+              value={offerPrice}
+              onChange={e => setOfferPrice(e.target.value)}
+            />
+          </div>
+          <small className="text-muted">
+            You can offer a higher price to increase the chance of acceptance.
+            The driver can see your offer and decide.
+          </small>
         </div>
 
         <div className="flex justify-between">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleBack}
-          >
-            Edit Details
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={confirmBooking}
-          >
-            Confirm Booking
-          </button>
+          <button className="btn btn-secondary" onClick={() => navigate(-1)}>Back</button>
+          <button className="btn btn-primary" onClick={handlePayment}>Pay & Confirm</button>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { apiFetch } from "../utils/jwt";
+import { apiFetch, verifyJWT } from "../utils/jwt";
 import { useNavigate, useParams } from "react-router-dom";
 
 const AddVehicle = () => {
@@ -12,9 +12,36 @@ const AddVehicle = () => {
   const [type, setType] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [route, setRoute] = useState("");
+  const [reservedSeats, setReservedSeats] = useState(0);
+  const [phone, setPhone] = useState("");
 
   const nav = useNavigate();
   const isEdit = !!id;
+
+  const [recommendedPrice, setRecommendedPrice] = useState(0);
+
+  useEffect(() => {
+    if (from && to) {
+      const timer = setTimeout(() => {
+        apiFetch("/api/fare/calculate", {
+          method: "POST",
+          body: JSON.stringify({ fromLocation: from, toLocation: to, viaRoute: route })
+        })
+          .then(data => {
+            setRecommendedPrice(data.recommendedPrice);
+            // Auto-suggest route if user hasn't modified it manually yet, or if simple refresh
+            // We verify if data.suggestedRoute differs significantly to avoid overwriting user edits 
+            // but relying on "route" dependency in useEffect handles most sync.
+            // Priority: If we sent a route, the backend returns it back. If we sent nothing, we get suggestions.
+            if (data.suggestedRoute) {
+              setRoute(data.suggestedRoute);
+            }
+          })
+          .catch(console.error);
+      }, 800); // 800ms debounce
+      return () => clearTimeout(timer);
+    }
+  }, [from, to, route]);
 
   useEffect(() => {
     if (isEdit) {
@@ -27,6 +54,12 @@ const AddVehicle = () => {
         setType(v.vehicleType);
         setImageUrl(v.imageUrl || "");
         setRoute(v.route || "");
+        setPhone(v.driverPhone || "");
+        // Trigger initial calculation
+        apiFetch("/api/fare/calculate", {
+          method: "POST",
+          body: JSON.stringify({ fromLocation: v.fromLocation, toLocation: v.toLocation })
+        }).then(d => setRecommendedPrice(d.recommendedPrice)).catch(console.error);
       }).catch(err => {
         alert("Failed to load vehicle details");
         nav("/admin/vehicles");
@@ -36,6 +69,10 @@ const AddVehicle = () => {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (Number(price) > recommendedPrice) {
+      alert(`Price cannot exceed the recommended fare of ₹${recommendedPrice}`);
+      return;
+    }
     try {
       const body = {
         fromLocation: from,
@@ -45,7 +82,9 @@ const AddVehicle = () => {
         tickets: Number(tickets),
         vehicleType: type,
         imageUrl,
-        route
+        route,
+        reservedSeats: Number(reservedSeats),
+        driverPhone: phone
       };
 
       if (isEdit) {
@@ -53,9 +92,41 @@ const AddVehicle = () => {
       } else {
         await apiFetch("/api/vehicles", { method: "POST", body: JSON.stringify(body) });
       }
-      nav("/admin/vehicles");
+      const user = verifyJWT();
+      if (user?.role === "driver") nav("/driver-dashboard");
+      else nav("/admin/vehicles");
     } catch (err) { alert(err.message || "Error"); }
   };
+
+  // Helper functions for route chips
+  const addStop = () => {
+    if (newStop) {
+      const stops = route ? route.split(" -> ") : [];
+      // Insert before destination (if exists in list, else append)
+      // Logic: we want the list to be distinct. 
+      // Current simulation: "From -> Stop1 -> Stop2 -> To".
+      // We will rebuild the string.
+      // Easiest is to treat "route" string as the source of truth.
+      if (!stops.includes(newStop)) {
+        if (stops.length >= 2) {
+          stops.splice(stops.length - 1, 0, newStop);
+        } else {
+          stops.push(newStop);
+        }
+        setRoute(stops.join(" -> "));
+      }
+      setNewStop("");
+    }
+  };
+
+  const removeStop = (stopToRemove) => {
+    const stops = route.split(" -> ");
+    const newStops = stops.filter(s => s !== stopToRemove);
+    setRoute(newStops.join(" -> "));
+  };
+
+  // Local state for the "Add stop" input
+  const [newStop, setNewStop] = useState("");
 
   return (
     <div className="container mt-4">
@@ -73,9 +144,53 @@ const AddVehicle = () => {
             </div>
           </div>
 
+          {/* Via Route Input with Map Button */}
           <div className="form-group">
-            <label className="label">Via Route (Major Points)</label>
-            <input className="input" placeholder="e.g. Highway 44, Toll Plaza, City Center" value={route} onChange={e => setRoute(e.target.value)} />
+            <div className="flex justify-between items-center mb-1">
+              <label className="label mb-0">Via Route (Waypoints)</label>
+              {(from && to) && (
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}&waypoints=${encodeURIComponent(route.split(' -> ').slice(1, -1).join('|'))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-xs btn-outline btn-primary"
+                  title="View Route on Google Maps"
+                >
+                  🗺️ View Map
+                </a>
+              )}
+            </div>
+
+            <div className="p-2 border rounded bg-gray-50 flex flex-wrap gap-2 min-h-[45px]">
+              {/* Start Point */}
+              <span className="badge badge-primary font-bold">{from || "?"}</span>
+              <span className="text-gray-400">→</span>
+
+              {/* Chips */}
+              {route.split(" -> ").slice(1, -1).map((stop, i) => (
+                <React.Fragment key={i}>
+                  <div className="badge badge-secondary gap-1 pr-1">
+                    {stop}
+                    <button type="button" onClick={() => removeStop(stop)} className="btn btn-ghost btn-xs text-white hover:bg-red-600 circle h-4 w-4 min-h-0 p-0 flex items-center justify-center rounded-full leading-none">×</button>
+                  </div>
+                  <span className="text-gray-400">→</span>
+                </React.Fragment>
+              ))}
+
+              {/* End Point */}
+              <span className="badge badge-primary font-bold">{to || "?"}</span>
+
+              <div className="flex items-center gap-1 ml-auto">
+                <input
+                  className="input input-xs border-gray-300 w-32"
+                  placeholder="+ Stop"
+                  value={newStop}
+                  onChange={e => setNewStop(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addStop(); } }}
+                />
+                <button type="button" onClick={addStop} className="btn btn-xs btn-success">+</button>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -91,12 +206,38 @@ const AddVehicle = () => {
 
           <div className="grid grid-cols-2 gap-2">
             <div className="form-group">
-              <label className="label">Price ($)</label>
-              <input className="input" type="number" step="0.01" placeholder="0.00" value={price} onChange={e => setPrice(e.target.value)} required />
+              <label className="label">Price</label>
+              <input
+                className="input"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={price}
+                onChange={e => setPrice(e.target.value)}
+                required
+              />
+              {recommendedPrice > 0 && (
+                <small className="block mt-1 text-sm font-bold text-success">
+                  Max Recommended Price: ₹{recommendedPrice}
+                </small>
+              )}
+              {price > recommendedPrice && recommendedPrice > 0 && (
+                <small className="block mt-1 text-sm font-bold text-danger">
+                  Error: Price cannot exceed ₹{recommendedPrice}
+                </small>
+              )}
             </div>
             <div className="form-group">
-              <label className="label">Available Seats</label>
+              <label className="label">Available Seats (Total)</label>
               <input className="input" type="number" placeholder="e.g. 40" value={tickets} onChange={e => setTickets(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label className="label">Mobile Number</label>
+              <input className="input" placeholder="e.g. +1234567890" value={phone} onChange={e => setPhone(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label className="label">Reserve for Self</label>
+              <input className="input" type="number" min="0" max={tickets} value={reservedSeats} onChange={e => setReservedSeats(e.target.value)} />
             </div>
           </div>
 

@@ -77,13 +77,13 @@ const UserBus = () => {
       </div>
 
       <div className="table-container">
-        <table className="table table-striped">
+        <table className="table table-striped align-middle">
           <thead>
             <tr>
-              <th>From</th>
-              <th>To</th>
+              <th style={{ width: '25%' }}>Route</th>
               <th>Date</th>
-              <th>Type</th>
+              <th>Vehicle</th>
+              <th>Driver</th>
               <th>Price</th>
               <th>Seats</th>
               <th>Action</th>
@@ -103,7 +103,7 @@ const UserBus = () => {
                       href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(v.fromLocation)}&destination=${encodeURIComponent(v.toLocation)}`}
                       target="_blank"
                       rel="noreferrer"
-                      style={{ textDecoration: 'none', color: 'inherit' }}
+                      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
                       title="View on Maps"
                     >
                       <strong>{v.fromLocation}</strong> <span style={{ color: 'var(--color-primary)' }}>→</span> <strong>{v.toLocation}</strong>
@@ -113,23 +113,25 @@ const UserBus = () => {
                   <td>{v.date}</td>
                   <td>
                     <span className="badge secondary">{v.vehicleType}</span>
+                  </td>
+                  <td>
                     {v.driverName && (
-                      <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {v.driverImage ? (
-                          <img src={v.driverImage} alt="Driver" style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
+                          <img src={v.driverImage} alt="Driver" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                         ) : (
-                          <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🧑‍✈️</div>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🧑‍✈️</div>
                         )}
-                        <span>{v.driverName}</span>
+                        <span style={{ fontWeight: '500' }}>{v.driverName}</span>
                       </div>
                     )}
                   </td>
-                  <td>₹{v.price}</td>
+                  <td style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>₹{v.price}</td>
                   <td>{v.tickets}</td>
                   <td>
                     <button
                       className="btn btn-primary btn-sm"
-                      style={{ padding: '4px 12px', fontSize: '12px' }}
+                      style={{ padding: '6px 16px' }}
                       onClick={() => nav(`/book/${v.id}`)}
                     >
                       Book
@@ -139,7 +141,7 @@ const UserBus = () => {
               ))
             ) : (
               <tr>
-                <td colspan="7" className="text-center text-muted" style={{ padding: '20px' }}>No rides found matching your criteria.</td>
+                <td colSpan="7" className="text-center text-muted" style={{ padding: '20px' }}>No rides found matching your criteria.</td>
               </tr>
             )}
           </tbody>
