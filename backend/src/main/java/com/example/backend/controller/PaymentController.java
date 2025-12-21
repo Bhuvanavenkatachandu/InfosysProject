@@ -1,64 +1,75 @@
 package com.example.backend.controller;
 
-import com.example.backend.model.Payment;
-import com.example.backend.service.PaymentService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
+import com.stripe.model.PaymentIntent;
+import com.stripe.param.PaymentIntentCreateParams;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping("/api/payment")
 public class PaymentController {
 
-    private final PaymentService paymentService;
+    private final com.example.backend.service.PaymentService paymentService;
 
-    public PaymentController(PaymentService paymentService) {
+    public PaymentController(com.example.backend.service.PaymentService paymentService,
+            @org.springframework.beans.factory.annotation.Value("${stripe.api.key}") String stripeApiKey) {
         this.paymentService = paymentService;
+        Stripe.apiKey = stripeApiKey;
     }
 
-    @PostMapping("/create-order")
-    public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> data) {
-        try {
-            Long bookingId = Long.parseLong(data.get("bookingId").toString());
-            Double amount = Double.parseDouble(data.get("amount").toString());
-            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+    @PostMapping("/create-payment-intent")
+    public Map<String, String> createPaymentIntent(@RequestBody Map<String, Object> data,
+            org.springframework.security.core.Authentication auth) throws StripeException {
+        System.out.println("PaymentController: Request received to create intent. Data: " + data);
+        Integer amountINR = Integer.parseInt(data.getOrDefault("amount", 100).toString());
+        if (amountINR < 1)
+            amountINR = 1; // Stripe minimum is ~₹0.50, but let's be safe
 
-            Payment p = paymentService.createOrder(bookingId, email, amount);
-            return ResponseEntity.ok(p);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        Long bookingId = data.containsKey("bookingId") ? Long.parseLong(data.get("bookingId").toString()) : null;
+        String userEmail = (auth != null) ? auth.getName() : "anonymous";
+        System.out.println("PaymentController: Creating intent for Email: " + userEmail + ", Amount: " + amountINR
+                + ", BookingId: " + bookingId);
+
+        long amountInPaise = amountINR * 100L;
+        System.out.println("PaymentController: Amount in Paise: " + amountInPaise);
+
+        PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
+                .setAmount(amountInPaise)
+                .setCurrency("inr")
+                .setDescription("Ride Booking Payment")
+                .setAutomaticPaymentMethods(
+                        PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
+                                .setEnabled(true)
+                                .build())
+                .build();
+
+        PaymentIntent paymentIntent = PaymentIntent.create(params);
+
+        // PERSISTENCE: Log the intent in our database
+        paymentService.logPaymentIntent(bookingId, userEmail, (double) amountINR, paymentIntent.getId());
+
+        Map<String, String> response = new HashMap<>();
+        response.put("clientSecret", paymentIntent.getClientSecret());
+
+        return response;
     }
 
-    @PostMapping("/verify")
-    public ResponseEntity<?> verifyPayment(@RequestBody Map<String, String> data) {
-        try {
-            String orderId = data.get("razorpayOrderId");
-            String paymentId = data.get("razorpayPaymentId");
-            String signature = data.get("razorpaySignature");
+    @PostMapping("/confirm")
+    public Map<String, Object> confirmPayment(@RequestBody Map<String, String> data) {
+        String intentId = data.get("paymentIntentId");
+        String methodId = data.get("paymentMethodId");
 
-            boolean valid = paymentService.verifyPayment(orderId, paymentId, signature);
-            if (valid)
-                return ResponseEntity.ok("Payment Verified");
-            else
-                return ResponseEntity.badRequest().body("Invalid Signature");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
+        com.example.backend.model.Payment p = paymentService.confirmPayment(intentId, methodId);
 
-    @GetMapping("/my-history")
-    public ResponseEntity<?> getHistory() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ResponseEntity.ok(paymentService.getMyHistory(email));
-    }
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", p != null);
+        if (p != null)
+            response.put("paymentId", p.getId());
 
-    @GetMapping("/driver-history")
-    public ResponseEntity<?> getDriverHistory() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ResponseEntity.ok(paymentService.getDriverHistory(email));
+        return response;
     }
 }

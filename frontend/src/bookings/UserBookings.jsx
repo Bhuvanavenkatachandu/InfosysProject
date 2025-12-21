@@ -44,7 +44,7 @@ const UserBookings = () => {
               <td style={{ fontSize: '0.9em', color: '#666' }}>{formatTime(b.createdAt)}</td>
               <td>
                 <p><strong>Seats:</strong> {b.seats}</p>
-                <p><strong>Total:</strong> ₹{b.seats * b.vehicle.price}</p>
+                <p><strong>Total:</strong> ₹{b.totalPrice || (b.seats * b.vehicle.price)}</p>
               </td>
               <td>
                 <div style={{ marginBottom: '5px' }}>

@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import Snowfall from "react-snowfall";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 /* Common */
@@ -27,11 +28,50 @@ import BookingForm from "./bookings/BookingForm";
 import ConfirmBooking from "./bookings/ConfirmBooking";
 import UserBookings from "./bookings/UserBookings";
 import PaymentSuccess from "./bookings/PaymentSuccess";
+import PaymentPage from "./bookings/PaymentPage";
 
 export default function App() {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (saved === "dark" || (!saved && prefersDark)) {
+      document.body.classList.add("dark-mode");
+      setIsDark(true);
+    } else {
+      document.body.classList.add("light-mode");
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    if (isDark) {
+      document.body.classList.remove("dark-mode");
+      document.body.classList.add("light-mode");
+      localStorage.setItem("theme", "light");
+      setIsDark(false);
+    } else {
+      document.body.classList.remove("light-mode");
+      document.body.classList.add("dark-mode");
+      localStorage.setItem("theme", "dark");
+      setIsDark(true);
+    }
+  };
+
   return (
     <Router>
-      <Header />
+      <Snowfall
+        snowflakeCount={isDark ? 200 : 100}
+        color={isDark ? "#ffffff" : "#acc1ff"}
+        style={{
+          position: "fixed",
+          width: "100vw",
+          height: "100vh",
+          zIndex: 1000,
+          pointerEvents: "none",
+        }}
+      />
+      <Header isDark={isDark} toggleTheme={toggleTheme} />
       <Routes>
         {/* Root Redirect */}
         <Route path="/" element={<RootRedirect />} />
@@ -56,6 +96,7 @@ export default function App() {
         {/* User */}
         <Route path="/user-rides" element={<ProtectedRoute allowedRoles={["user"]}><UserBus /></ProtectedRoute>} />
         <Route path="/book/:id" element={<ProtectedRoute allowedRoles={["user"]}><BookingForm /></ProtectedRoute>} />
+        <Route path="/payment" element={<ProtectedRoute allowedRoles={["user"]}><PaymentPage /></ProtectedRoute>} />
         <Route path="/confirm-booking" element={<ProtectedRoute allowedRoles={["user"]}><ConfirmBooking /></ProtectedRoute>} />
         <Route path="/booking-success" element={<ProtectedRoute allowedRoles={["user"]}><PaymentSuccess /></ProtectedRoute>} />
         <Route path="/my-bookings" element={<ProtectedRoute allowedRoles={["user"]}><UserBookings /></ProtectedRoute>} />

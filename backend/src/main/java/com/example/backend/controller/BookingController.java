@@ -69,8 +69,8 @@ public class BookingController {
                 b.setTotalPrice(Double.valueOf(body.get("totalPrice").toString()));
             }
 
-            // Direct Booking: Auto-confirm all bookings
-            b.setStatus("CONFIRMED");
+            // Direct Booking: Start as PENDING until payment
+            b.setStatus("PENDING");
 
             Booking saved = bookingService.createBooking(b);
             return ResponseEntity.ok(saved);

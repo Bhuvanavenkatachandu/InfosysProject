@@ -1,57 +1,70 @@
-# Rideshare Application - Project Guide
+# System Architecture
 
-This guide explains the project structure and how the application works, making it easy to explain to others.
+## Overview
+This document describes the architecture of the Ride Share application, a full-stack platform for ride sharing, vehicle management, and secure payments.
 
-## 1. Project Overview
-This is a full-stack **Rideshare Application** that allows:
-*   **Users**: Search and book rides.
-*   **Drivers**: Post rides and manage reservations.
-*   **Admins**: Manage users and vehicles.
+## Tech Stack
+- **Frontend**: React (Vite)
+- **Backend**: Spring Boot (Java 17)
+- **Database**: H2 (File-based: `rideshare_v2.mv.db`)
+- **Authentication**: JWT (JSON Web Token) with Spring Security
+- **Real-time**: WebSocket (SockJS/STOMP)
+- **Payments**: Stripe (Stripe Java SDK + React Stripe Elements)
 
-## 2. Technical Stack
-*   **Frontend**: React (Vite)
-*   **Backend**: Java (Spring Boot)
-*   **Database**: H2 (In-memory for development) or MySQL
+---
 
-## 3. Project Structure
-The project is split into two main folders:
+## 1. Backend Architecture
+The backend is a Spring Boot application running on **Port 8084**.
 
-```
-InfosysProject/
-├── backend/            # Spring Boot Application
-│   └── src/main/java   # Backend Source Code
-│       ├── controller  # API Endpoints (e.g., VehicleController)
-│       ├── service     # Business Logic (e.g., VehicleService)
-│       └── model       # Database Entities (Vehicle, User)
-└── frontend/           # React Application
-    └── src/
-        ├── admin/      # Admin Views
-        ├── driver/     # Driver Views
-        ├── user/       # User Views
-        └── components/ # Reusable UI Components
-```
+### Security & CORS
+- **Spring Security**: Enforces JWT authentication for all protected routes (e.g., `/api/payments/**`, `/api/bookings/**`).
+- **Public Routes**: `/api/auth/**`, `/h2-console/**`, and `/ws/**` are permitted for initialization/handshake.
+- **CORS Whitelist**: Explicitly allows dev ports `5173`, `5174`, and `5175` to prevent browser preflight blockage.
 
-## 4. Key Logic Flows
+### Data Model (Persistence)
+- **Database**: Standardized to a single file-based H2 database `rideshare_v2` for persistence across sessions.
+- **Entities**:
+  - `User`: Handles roles (ADMIN, DRIVER, USER).
+  - `Vehicle`: Stores ride details and driver info.
+  - `Booking`: Tracks seat reservations and payment status (`PENDING` -> `CONFIRMED`).
+  - `Payment`: Logs Stripe `PaymentIntentId` and transaction status.
 
-### Posting a Ride (Driver)
-1.  Driver fills the form on Frontend (`AddVehicle.jsx`).
-2.  Frontend calls `POST /api/vehicles`.
-3.  **VehicleController**: Receives request + Authentication (JWT).
-4.  **VehicleService**:
-    *   Finds the logged-in Driver (User).
-    *   Attaches Driver Name/Email/Image to the new Vehicle.
-    *   Auto-creates a booking if the driver reserved seats for themselves.
-    *   Saves to Database.
+### APIs
+- **Auth**: `/api/auth/register`, `/api/auth/login`, `/api/auth/me`.
+- **Bookings**: Handled via `BookingController`, starts as `PENDING`.
+- **Payments**: `create-payment-intent` logic located in `PaymentController`.
 
-### Booking a Ride (User)
-1.  User views rides on `UserBus.jsx`.
-2.  Clicks "Book" -> `BookingForm.jsx`.
-3.  Submits booking -> Backend `BookingService` reduces vehicle tickets and saves booking.
+---
 
-## 5. Security
-*   **JWT (JSON Web Tokens)**: Used for keeping users logged in.
-*   **ProtectedRoute**: Frontend component that checks if you are allowed on a page (e.g., preventing Users from seeing Admin pages).
+## 2. Frontend Architecture
+The frontend is a Vite-powered React application running on **Port 5173/5174/5175**.
 
-## 6. How to Run
-1.  **Backend**: Open terminal in `backend/` and run `./gradlew bootRun`.
-2.  **Frontend**: Open terminal in `frontend/` and run `npm run dev`.
+### API Communication
+- **apiFetch**: A centralized utility in `frontend/src/utils/jwt.js` that:
+  - Automatically appends the `Authorization: Bearer <token>` header.
+  - Switches between `localhost` and `127.0.0.1` based on the browser origin.
+  - Handles token expiration and server-side verification.
+
+### Navigation & Redirection
+- **Redirection Logic**: Validates JWT with the server on login to prevent "stale session" loops.
+- **Protected Routes**: Implemented via a `ProtectedRoute` component that checks roles before rendering pages.
+
+### Payment Flow
+1. **Selection**: User selects/negotiates a ride on `BookingForm`.
+2. **Confirmation**: `ConfirmBooking` creates a `PENDING` record in the DB.
+3. **Stripe Layer**: `PaymentPage` initializes Stripe Elements and fetches a `clientSecret`.
+4. **Success**: Upon success, the backend updates the booking to `CONFIRMED` and registers the `paymentIntentId`.
+
+---
+
+## 3. Real-time Notifications
+- **WebSocket**: Uses `/ws` endpoint on port **8084**.
+- **Handshake**: Whitelisted in `SecurityConfig` to allow SockJS connections without initial JWT headers (authentication is handles in the STOMP message channel).
+
+---
+
+## 4. Stripe Payment PoC (Standalone)
+A separate Proof-of-Concept is available in the `/StripePaymentPoC` directory.
+- **Backend (Port 8081)**: Minimalist Spring Boot app for intent creation.
+- **Frontend**: Demonstrates raw Stripe Elements integration with dynamic `return_url` handling.
+- **Status**: Updated to be fully compatible with the whitelisted dev ports.

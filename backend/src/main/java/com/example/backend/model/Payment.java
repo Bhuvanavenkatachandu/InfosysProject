@@ -13,14 +13,12 @@ public class Payment {
     private Long bookingId;
     private String userEmail;
 
-    // Razorpay Order ID
-    private String razorpayOrderId;
-
-    // Razorpay Payment ID (after success)
-    private String razorpayPaymentId;
+    // Stripe Identifiers
+    private String stripePaymentIntentId;
+    private String stripePaymentMethodId;
 
     private Double amount;
-    private String status; // PENDING, PAID, FAILED
+    private String status; // PENDING, CONFIRMED, FAILED
 
     public Payment() {
     }
@@ -49,20 +47,20 @@ public class Payment {
         this.userEmail = userEmail;
     }
 
-    public String getRazorpayOrderId() {
-        return razorpayOrderId;
+    public String getStripePaymentIntentId() {
+        return stripePaymentIntentId;
     }
 
-    public void setRazorpayOrderId(String razorpayOrderId) {
-        this.razorpayOrderId = razorpayOrderId;
+    public void setStripePaymentIntentId(String stripePaymentIntentId) {
+        this.stripePaymentIntentId = stripePaymentIntentId;
     }
 
-    public String getRazorpayPaymentId() {
-        return razorpayPaymentId;
+    public String getStripePaymentMethodId() {
+        return stripePaymentMethodId;
     }
 
-    public void setRazorpayPaymentId(String razorpayPaymentId) {
-        this.razorpayPaymentId = razorpayPaymentId;
+    public void setStripePaymentMethodId(String stripePaymentMethodId) {
+        this.stripePaymentMethodId = stripePaymentMethodId;
     }
 
     public Double getAmount() {

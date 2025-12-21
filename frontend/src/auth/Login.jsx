@@ -13,23 +13,48 @@ const Login = () => {
   useEffect(() => {
     const user = verifyJWT();
     if (user) {
-      if (user.role === "admin") nav("/dashboard");
-      else if (user.role === "driver") nav("/driver-dashboard");
-      else nav("/user-rides");
+      // Validate with server to prevent stale token redirect loops
+      apiFetch("/api/auth/me")
+        .then(data => {
+          const role = data.role ? data.role.toLowerCase() : "user";
+          if (role === "admin") nav("/dashboard");
+          else if (role === "driver") nav("/driver-dashboard");
+          else nav("/user-rides");
+        })
+        .catch(() => {
+          localStorage.removeItem("token");
+        });
     }
   }, [nav]);
 
   const handleLogin = async (e) => {
     e.preventDefault(); setErr("");
     try {
-      const res = await fetch(`${API}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
-      const data = await res.json();
-      if (!res.ok) { setErr(data?.error || "Login failed"); return; }
+      const res = await fetch(`${API}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const text = await res.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch (e) { data = text; }
+
+      if (!res.ok) {
+        console.error("Login failed:", res.status, data);
+        setErr((typeof data === 'object' && data?.error) ? data.error : "Login failed");
+        return;
+      }
+
       saveToken(data.token);
-      if (data.role === "admin") nav("/dashboard");
-      else if (data.role === "driver") nav("/driver-dashboard");
+      const role = data.role ? data.role.toLowerCase() : "user";
+      if (role === "admin") nav("/dashboard");
+      else if (role === "driver") nav("/driver-dashboard");
       else nav("/user-rides");
-    } catch (error) { setErr(error.message || "Network error"); }
+    } catch (error) {
+      console.error("Login error:", error);
+      setErr(error.message || "Network error");
+    }
   };
   return (
     <div className="container mt-4">

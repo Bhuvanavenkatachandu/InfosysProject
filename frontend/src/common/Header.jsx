@@ -3,37 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { verifyJWT, getToken } from "../utils/jwt";
 
 
-const Header = () => {
+const Header = ({ isDark, toggleTheme }) => {
   const navigate = useNavigate();
   const user = verifyJWT(getToken());
-  const [isDark, setIsDark] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
-
-  React.useEffect(() => {
-    // Check initial preference
-    const saved = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (saved === "dark" || (!saved && prefersDark)) {
-      document.body.classList.add("dark-mode");
-      setIsDark(true);
-    } else {
-      document.body.classList.add("light-mode");
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    if (isDark) {
-      document.body.classList.remove("dark-mode");
-      document.body.classList.add("light-mode");
-      localStorage.setItem("theme", "light");
-      setIsDark(false);
-    } else {
-      document.body.classList.remove("light-mode");
-      document.body.classList.add("dark-mode");
-      localStorage.setItem("theme", "dark");
-      setIsDark(true);
-    }
-  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");

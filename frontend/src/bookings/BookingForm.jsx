@@ -81,19 +81,22 @@ const BookingForm = () => {
 
       const priceToSubmit = Number((segmentPrice * seats).toFixed(2));
 
-      await apiFetch("/api/bookings", {
-        method: "POST",
-        body: JSON.stringify({
-          vehicleId: bus.id,
-          seats,
-          pickupLocation: finalPickup,
-          dropoffLocation: finalDropoff,
-          totalPrice: priceToSubmit,
-          passengers: passengers.map(p => ({ ...p, age: Number(p.age) }))
-        })
+      const totalPrice = Number((segmentPrice * seats).toFixed(2));
+
+      // Instead of immediate booking, go to Confirm & Pay
+      nav("/confirm-booking", {
+        state: {
+          bookingData: {
+            bus: bus,
+            seats: seats,
+            passengerNames: passengers.map(p => p.name),
+            pickup: finalPickup,
+            dropoff: finalDropoff,
+            segmentPrice: Number(segmentPrice),
+            totalPrice: totalPrice
+          }
+        }
       });
-      alert("Booking Successful!"); // Feedback
-      nav("/my-bookings");
     } catch (err) { setError(err.message || "Error"); }
   };
 

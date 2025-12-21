@@ -27,7 +27,7 @@ export const verifyJWT = (token) => {
   // Normalize shape: server may use sub/email + role
   return {
     email: info.sub || info.email || info.user?.email,
-    role: info.role || info.user?.role,
+    role: (info.role || info.user?.role || "user").toLowerCase(),
     name: info.name || info.user?.name,
     exp: exp || info.exp,
   };

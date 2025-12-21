@@ -33,11 +33,14 @@ const Register = () => {
         })
       });
 
-      const data = await res.json().catch(() => null);
+      const text = await res.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch (e) { data = text; }
 
       if (!res.ok) {
-        console.error("Register failed response:", res.status, data);
-        setErr(data?.error || `Register failed (${res.status})`);
+        console.error("Register failed:", res.status, data);
+        const errorMsg = (typeof data === 'object' && data?.error) ? data.error : (typeof data === 'string' ? data : `Error ${res.status}`);
+        setErr(errorMsg);
         return;
       }
 

@@ -10,7 +10,7 @@ import java.util.List;
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByUserEmail(String userEmail);
 
-    Payment findByRazorpayOrderId(String razorpayOrderId);
+    Payment findByStripePaymentIntentId(String stripePaymentIntentId);
 
     @Query("SELECT p FROM Payment p WHERE p.bookingId IN (SELECT b.id FROM Booking b JOIN b.vehicle v WHERE v.driverEmail = :email)")
     List<Payment> findByDriverEmail(@Param("email") String email);

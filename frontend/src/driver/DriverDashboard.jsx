@@ -24,7 +24,7 @@ const DriverDashboard = () => {
         if (!user || user.role !== "driver") return;
 
         const client = new Client({
-            webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
+            webSocketFactory: () => new SockJS("http://localhost:8084/ws"),
             onConnect: () => {
                 client.subscribe("/topic/driver/" + user.email, (msg) => {
                     alert("🔔 " + msg.body);

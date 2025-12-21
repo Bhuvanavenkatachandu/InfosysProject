@@ -13,10 +13,14 @@ import java.util.Optional;
 @RequestMapping("/api/auth")
 public class AuthController {
     private final UserService userService;
-    public AuthController(UserService userService) { this.userService = userService; }
+
+    public AuthController(UserService userService) {
+        this.userService = userService;
+    }
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Map<String, Object> body) {
+        System.out.println("Registration attempt for: " + body.get("email"));
         try {
             String name = (String) body.get("name");
             String email = (String) body.get("email");
@@ -34,7 +38,8 @@ public class AuthController {
             u.setProfileImage((String) body.getOrDefault("profileImage", ""));
 
             User saved = userService.register(u);
-            return ResponseEntity.ok(Map.of("message", "Registered", "email", saved.getEmail(), "role", saved.getRole()));
+            return ResponseEntity
+                    .ok(Map.of("message", "Registered", "email", saved.getEmail(), "role", saved.getRole()));
         } catch (Exception ex) {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
@@ -42,18 +47,18 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
+        System.out.println("Login attempt for: " + body.get("email"));
         try {
             String email = body.get("email");
             String password = body.get("password");
             String token = userService.login(email, password);
             User u = userService.findByEmail(email).orElseThrow();
             return ResponseEntity.ok(Map.of(
-                "token", token, 
-                "email", u.getEmail(), 
-                "role", u.getRole(), 
-                "name", u.getName(),
-                "profileImage", u.getProfileImage() != null ? u.getProfileImage() : ""
-            ));
+                    "token", token,
+                    "email", u.getEmail(),
+                    "role", u.getRole(),
+                    "name", u.getName(),
+                    "profileImage", u.getProfileImage() != null ? u.getProfileImage() : ""));
         } catch (Exception ex) {
             return ResponseEntity.status(401).body(Map.of("error", ex.getMessage()));
         }
@@ -61,16 +66,16 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<?> me(Principal principal) {
-        if (principal == null) return ResponseEntity.status(401).body(Map.of("error","Unauthorized"));
+        if (principal == null)
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
         String email = principal.getName();
         Optional<User> userOpt = userService.findByEmail(email);
         return userOpt.map(u -> ResponseEntity.ok(Map.of(
-            "email",u.getEmail(),
-            "name",u.getName(),
-            "role",u.getRole(),
-            "superAdmin",u.isSuperAdmin(),
-            "profileImage", u.getProfileImage() != null ? u.getProfileImage() : ""
-        )))
-                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error","User not found")));
+                "email", u.getEmail(),
+                "name", u.getName(),
+                "role", u.getRole(),
+                "superAdmin", u.isSuperAdmin(),
+                "profileImage", u.getProfileImage() != null ? u.getProfileImage() : "")))
+                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "User not found")));
     }
 }
